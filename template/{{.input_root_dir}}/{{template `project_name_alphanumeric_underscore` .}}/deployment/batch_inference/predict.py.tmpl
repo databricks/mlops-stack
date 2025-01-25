@@ -29,18 +29,18 @@ def predict_batch(
     {{ end }}
     output_df = (
         prediction_df.withColumn("prediction", prediction_df["prediction"])
-        .withColumn("model_version", lit(model_version))
-        .withColumn("inference_timestamp", to_timestamp(lit(ts)))
+        .withColumn("model_id", lit(model_version))
+        .withColumn("timestamp", to_timestamp(lit(ts)))
     )
     {{ else }} 
     predict = mlflow.pyfunc.spark_udf(
-        spark_session, model_uri, result_type="string", env_manager="virtualenv"
+        spark_session, model_uri, result_type="double", env_manager="virtualenv"
     )    
     
     output_df = (
         table.withColumn("prediction", predict(struct(*table.columns)))
-        .withColumn("model_version", lit(model_version))
-        .withColumn("inference_timestamp", to_timestamp(lit(ts)))
+        .withColumn("model_id", lit(model_version))
+        .withColumn("timestamp", to_timestamp(lit(ts)))
     )
     {{ end -}}
     

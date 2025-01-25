@@ -119,8 +119,32 @@ Follow the next section to configure the input and output data tables for the ba
 {{- end }}
 
 ### Setting up the batch inference job
-The batch inference job expects an input Delta table with a schema that your registered model accepts. To use the batch
+The batch inference job expects an input Delta table with a schema that your registered model accepts (trip_distance, pickup_zip and dropoff_zip). To use the batch
 inference job, set up such a Delta table in both your staging and prod workspaces.
+```
+# To test the batch job the training data can be used as input
+
+input_table_path = "/databricks-datasets/nyctaxi-with-zipcodes/subsampled"
+training_df = spark.read.format("delta").load(input_table_path)
+
+# drop unused columns
+df = df.drop("tpep_pickup_datetime", "tpep_dropoff_datetime")
+
+# target column used for monitoring, not for predictions
+df = df.withColumnRenamed('fare_amount', 'price')
+
+spark.sql("CREATE DATABASE IF NOT EXISTS my_catalog.my_schema")
+
+def write_to_table(df, database, table):
+  (df.write
+   .format("delta")
+   .mode("overwrite")
+   .option("overwriteSchema", "true")
+   .saveAsTable(f"{database}.{table}"))
+
+# Write the DataFrame to a Delta table
+write_to_table(training_df, database="my_catalog.my_schema", table="batch_input_table")
+```
 Following this, update the batch_inference_job base parameters in `{{template `project_name_alphanumeric_underscore` .}}/resources/batch-inference-workflow-resource.yml` to pass
 the name of the input Delta table and the name of the output Delta table to which to write batch predictions.
 
